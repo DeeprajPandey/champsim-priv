@@ -1,5 +1,6 @@
 .DS_Store
+*.bak
 bin/
 obj/
 dpc3_traces/
-*.bak
+results*/
