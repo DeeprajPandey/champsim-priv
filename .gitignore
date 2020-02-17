@@ -4,3 +4,5 @@ bin/
 obj/
 dpc3_traces/
 results*/
+# venv dir
+plot-results/
