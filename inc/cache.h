@@ -1,8 +1,8 @@
 #ifndef CACHE_H
 #define CACHE_H
 
-#include "memory_class.h"
 #include <queue>
+#include "memory_class.h"
 
 // PAGE
 extern uint32_t PAGE_TABLE_LATENCY, SWAP_LATENCY;
@@ -227,7 +227,7 @@ class CACHE : public MEMORY {
 
     // the incoming cache will be stored in this queue. Popped from the front.
     private:
-        static std::queue<int> fifo_queue();
+        static std::queue<int> fifo_queue;
 };
 
 #endif
