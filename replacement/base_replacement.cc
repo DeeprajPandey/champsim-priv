@@ -1,5 +1,8 @@
 #include "cache.h"
 
+// allocate memory to the queue
+std::queue<int> CACHE::fifo_queue = std::queue<int>();
+
 uint32_t CACHE::find_victim(uint32_t cpu, uint64_t instr_id, uint32_t set, const BLOCK *current_set, uint64_t ip, uint64_t full_addr, uint32_t type)
 {
     // baseline LRU replacement policy for other caches 
@@ -74,23 +77,17 @@ uint32_t CACHE::fifo_victim(uint32_t cpu, uint64_t instr_id, uint32_t set, const
     }
 
     // FIFO victim
-    if (way == NUM_WAY) {
-        for (way=0; way<NUM_WAY; way++) {
-            if (block[set][way].fifo == NUM_WAY-1) {
-
-                DP ( if (warmup_complete[cpu]) {
-                cout << "[" << NAME << "] " << __func__ << " instr_id: " << instr_id << " replace set: " << set << " way: " << way;
-                cout << hex << " address: " << (full_addr>>LOG2_BLOCK_SIZE) << " victim address: " << block[set][way].address << " data: " << block[set][way].data;
-                cout << dec << " fifo: " << block[set][way].fifo << endl; });
-
-                break;
-            }
-        }
+    // if the queue has slots left
+    if (fifo_queue.size() < NUM_WAY) {
+        CACHE::fifo_queue.push(way);
     }
-
-    if (way == NUM_WAY) {
-        cerr << "[" << NAME << "] " << __func__ << " no victim! set: " << set << endl;
-        assert(0);
+    // queue is full
+    else {
+        // copy the line in the front of the queue
+        way = CACHE::fifo_queue.front();
+        // remove the first element
+        CACHE::fifo_queue.pop();
+        CACHE::fifo_queue.push(way);
     }
 
     return way;
@@ -105,16 +102,6 @@ void CACHE::lru_update(uint32_t set, uint32_t way)
         }
     }
     block[set][way].lru = 0; // promote to the MRU position
-}
-
-void CACHE::fifo_update(uint32_t set)
-{
-    // update fifo replacement state
-    for (uint32_t i=0; i<NUM_WAY; i++) {
-        if (block[set][i].valid == true) {
-            block[set][i].fifo++;
-        }
-    }
 }
 
 void CACHE::replacement_final_stats()
