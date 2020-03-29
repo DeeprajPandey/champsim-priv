@@ -227,7 +227,7 @@ class CACHE : public MEMORY {
 
     // the incoming cache will be stored in this queue. Popped from the front.
     private:
-        static std::queue<int> fifo_queue;
+        static std::queue<int> fifo_queue();
 };
 
 #endif
