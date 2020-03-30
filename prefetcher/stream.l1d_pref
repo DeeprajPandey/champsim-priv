@@ -21,36 +21,36 @@ vector< queue<uint64_t> > all_buffers;
 
 void CACHE::l1d_prefetcher_initialize() 
 {
-	// initialise 8 fifo streams
-	for (uint8_t i=0; i<NUM_BUFFERS; i++) {
-		all_buffers.push_back(queue<uint64_t>());
-	}
-	assert(all_buffers.size() == NUM_BUFFERS);
+    // initialise 8 fifo streams
+    for (uint8_t i=0; i<NUM_BUFFERS; i++) {
+        all_buffers.push_back(queue<uint64_t>());
+    }
+    assert(all_buffers.size() == NUM_BUFFERS);
 }
 
 void CACHE::l1d_prefetcher_operate(uint64_t base_addr, uint64_t ip, uint8_t cache_hit, uint8_t type)
 {
-	if (type != LOAD)
-		return;
+    if (type != LOAD)
+        return;
 
-	uint64_t block_num = base_addr >> LOG2_BLOCK_SIZE;
+    uint64_t block_num = base_addr >> LOG2_BLOCK_SIZE;
 
-	// we care only about the misses
-	if (cache_hit == 0) {
-		// check if the block is in any of the stream buffers
-		uint8_t index = -1;
+    // we care only about the misses
+    if (cache_hit == 0) {
+        // check if the block is in any of the stream buffers
+        uint8_t index = -1;
 
-		for (index=0; index<NUM_BUFFERS; index++) {
-	        if (all_buffers[index].front() == block_num)
-	            break;
-    	}
-	}
-	else {
-	}
+        for (index=0; index<NUM_BUFFERS; index++) {
+            if (all_buffers[index].front() == block_num)
+                break;
+        }
+    }
+    else {
+    }
 
-	uint64_t pf_addr = ((base_addr>>LOG2_BLOCK_SIZE)+1) << LOG2_BLOCK_SIZE;
+    uint64_t pf_addr = ((base_addr>>LOG2_BLOCK_SIZE)+1) << LOG2_BLOCK_SIZE;
 
-	DP (if (warmup_complete[cpu]) {
+    DP (if (warmup_complete[cpu]) {
     cout << "[" << NAME << "] " << __func__ << hex << " base_cl: " << (base_addr>>LOG2_BLOCK_SIZE);
     cout << " pf_cl: " << (pf_addr>>LOG2_BLOCK_SIZE) << " ip: " << ip << " cache_hit: " << +cache_hit << " type: " << +type << endl; });
 
@@ -64,5 +64,5 @@ void CACHE::l1d_prefetcher_cache_fill(uint64_t addr, uint32_t set, uint32_t way,
 
 void CACHE::l1d_prefetcher_final_stats()
 {
-	cout << "CPU " << cpu << " L1D stream prefetcher final stats" << endl;
+    cout << "CPU " << cpu << " L1D stream prefetcher final stats" << endl;
 }
