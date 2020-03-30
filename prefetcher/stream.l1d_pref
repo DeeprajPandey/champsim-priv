@@ -55,18 +55,35 @@ void CACHE::l1d_prefetcher_operate(uint64_t base_addr, uint64_t ip, uint8_t cach
             all_buffers.pop_back();
             assert (all_buffers.size() == NUM_BUFFERS - 1);
 
-            // add k blocks to a fifo queue
             queue<uint64_t> temp;
-            // k = BUFFER_DEPTH
+            // add k blocks to a fifo queue. k = BUFFER_DEPTH
             for (uint8_t j=1; j<=BUFFER_DEPTH; j++) {
                 // A+1, A+2,... A+k because A(base_addr) will be prefetched
                 temp.push(block_num + j);
             }
+            while(!temp.empty()) temp.pop(); // clear the temp queue
 
             // place Queue(block to block+k) at mru position (start) of vector
             all_buffers.insert(all_buffers.begin(), temp);
-            // prefetch base_addr (which had missed)
-            pf_addr = base_addr;
+            // prefetch the missed addr
+            pf_addr = block_num<<LOG2_BLOCK_SIZE;
+        }
+        // block_num matched to front of some stream buffer at [index]
+        else {
+            queue<int> temp = all_buffers[index];
+            // fetch the addr in the front of this fifo stream
+            uint64_t pf_block = temp.front(); // this is addr>>6, i.e. block number
+            pf_addr = pf_block<<LOG2_BLOCK_SIZE;
+            temp.pop();
+            // we just popped A+1 (block_num). add A+5 at the end of queue
+            temp.push(block_num+BUFFER_DEPTH);
+            
+            // remove the old copy of the queue
+            all_buffers.erase(all_buffers.begin()+index);
+            // move the queue (with 2nd addr now 1st) to mru position
+            all_buffers.insert(all_buffers.begin(), temp);
+            while(!temp.empty()) temp.pop(); // clear the temp queue
+            assert(all_buffers.size() == NUM_BUFFERS);
         }
     }
 
