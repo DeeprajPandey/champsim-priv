@@ -33,8 +33,8 @@ void CACHE::l1d_prefetcher_initialize()
 
 void CACHE::l1d_prefetcher_operate(uint64_t base_addr, uint64_t ip, uint8_t cache_hit, uint8_t type)
 {
-    if (type != LOAD)
-        return;
+    // if (type != LOAD)
+    //     return;
 
     uint64_t pf_addr;
     uint64_t block_num = base_addr >> LOG2_BLOCK_SIZE;
@@ -66,14 +66,15 @@ void CACHE::l1d_prefetcher_operate(uint64_t base_addr, uint64_t ip, uint8_t cach
             // place Queue(block to block+k) at mru position (start) of vector
             all_buffers.insert(all_buffers.begin(), temp);
             // prefetch the missed addr
-            pf_addr = block_num<<LOG2_BLOCK_SIZE;
+            // pf_addr = block_num<<LOG2_BLOCK_SIZE;
         }
         // block_num matched to front of some stream buffer at [index]
         else {
-            queue<int> temp = all_buffers[index];
+            queue<uint64_t> temp = all_buffers[index];
             // fetch the addr in the front of this fifo stream
             uint64_t pf_block = temp.front(); // this is addr>>6, i.e. block number
             pf_addr = pf_block<<LOG2_BLOCK_SIZE;
+            prefetch_line(ip, base_addr, pf_addr, FILL_L1, 0);
             temp.pop();
             // we just popped A+1 (block_num). add A+5 at the end of queue
             temp.push(block_num+BUFFER_DEPTH);
@@ -90,8 +91,6 @@ void CACHE::l1d_prefetcher_operate(uint64_t base_addr, uint64_t ip, uint8_t cach
     DP (if (warmup_complete[cpu]) {
     cout << "[" << NAME << "] " << __func__ << hex << " base_cl: " << (base_addr>>LOG2_BLOCK_SIZE);
     cout << " pf_cl: " << (pf_addr>>LOG2_BLOCK_SIZE) << " ip: " << ip << " cache_hit: " << +cache_hit << " type: " << +type << endl; });
-
-    prefetch_line(ip, base_addr, pf_addr, FILL_L1, 0);
 }
 
 void CACHE::l1d_prefetcher_cache_fill(uint64_t addr, uint32_t set, uint32_t way, uint8_t prefetch, uint64_t evicted_addr, uint32_t metadata_in)
