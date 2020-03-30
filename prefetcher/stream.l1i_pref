@@ -20,15 +20,15 @@ using namespace std;
 // vector with NUM_BUFFERS stream buffers
 // vector[0] is MRU position
 // vector[NUM_BUFFERS] is LRU
-vector< queue<uint64_t> > all_buffers;
+vector< queue<uint64_t> > l1i_all_buffers;
 
 void O3_CPU::l1i_prefetcher_initialize() 
 {
   // initialise 8 fifo streams
     for (uint8_t i=0; i<NUM_BUFFERS; i++) {
-        all_buffers.push_back(queue<uint64_t>());
+        l1i_all_buffers.push_back(queue<uint64_t>());
     }
-    assert(all_buffers.size() == NUM_BUFFERS);
+    assert(l1i_all_buffers.size() == NUM_BUFFERS);
 }
 
 void O3_CPU::l1i_prefetcher_branch_operate(uint64_t ip, uint8_t branch_type, uint64_t branch_target)
@@ -50,15 +50,15 @@ void O3_CPU::l1i_prefetcher_cache_operate(uint64_t v_addr, uint8_t cache_hit, ui
         uint8_t index = -1;
 
         for (index=0; index<NUM_BUFFERS; index++) {
-            if (all_buffers[index].front() == block_num)
+            if (l1i_all_buffers[index].front() == block_num)
                 break;
         }
 
         // block isn't in any stream buffer
         if (index == NUM_BUFFERS) {
             // last position is LRU, remove the queue
-            all_buffers.pop_back();
-            assert (all_buffers.size() == NUM_BUFFERS - 1);
+            l1i_all_buffers.pop_back();
+            assert (l1i_all_buffers.size() == NUM_BUFFERS - 1);
 
             queue<uint64_t> temp;
             // add k blocks to a fifo queue. k = BUFFER_DEPTH
@@ -69,13 +69,13 @@ void O3_CPU::l1i_prefetcher_cache_operate(uint64_t v_addr, uint8_t cache_hit, ui
             while(!temp.empty()) temp.pop(); // clear the temp queue
 
             // place Queue(block to block+k) at mru position (start) of vector
-            all_buffers.insert(all_buffers.begin(), temp);
+            l1i_all_buffers.insert(l1i_all_buffers.begin(), temp);
             // prefetch the missed addr
             // pf_addr = block_num<<LOG2_BLOCK_SIZE;
         }
         // block_num matched to front of some stream buffer at [index]
         else {
-            queue<uint64_t> temp = all_buffers[index];
+            queue<uint64_t> temp = l1i_all_buffers[index];
             // prefetch into l1I onlu if there's space
             if (L1I.MSHR.occupancy < (L1I.MSHR.SIZE>>1)) {
 	            // fetch the addr in the front of this fifo stream
@@ -88,11 +88,11 @@ void O3_CPU::l1i_prefetcher_cache_operate(uint64_t v_addr, uint8_t cache_hit, ui
             temp.push(block_num+BUFFER_DEPTH);
             
             // remove the old copy of the queue
-            all_buffers.erase(all_buffers.begin()+index);
+            l1i_all_buffers.erase(l1i_all_buffers.begin()+index);
             // move the queue (with 2nd addr now 1st) to mru position
-            all_buffers.insert(all_buffers.begin(), temp);
+            l1i_all_buffers.insert(l1i_all_buffers.begin(), temp);
             while(!temp.empty()) temp.pop(); // clear the temp queue
-            assert(all_buffers.size() == NUM_BUFFERS);
+            assert(l1i_all_buffers.size() == NUM_BUFFERS);
         }
     }
 }
