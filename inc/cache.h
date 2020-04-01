@@ -1,7 +1,8 @@
 #ifndef CACHE_H
 #define CACHE_H
 
-#include <queue>
+#include <vector>
+#include <algorithm> // find
 #include "memory_class.h"
 
 // PAGE
@@ -227,7 +228,7 @@ class CACHE : public MEMORY {
 
     // the incoming cache will be stored in this queue. Popped from the front.
     private:
-        static std::queue<int> fifo_queue;
+        static std::vector<uint32_t> fifo_queue;
 };
 
 #endif
