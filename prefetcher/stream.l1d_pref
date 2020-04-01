@@ -86,7 +86,7 @@ void CACHE::l1d_prefetcher_operate(uint64_t addr, uint64_t ip, uint8_t cache_hit
         // block_num matched to front of some stream buffer at [index]
         else {
             queue<uint64_t> temp = l1d_all_buffers[index];
-            // fetch the addr in the front of this fifo stream
+            // fetch the addr in the first position of this fifo stream
             uint64_t pf_block = temp.front(); // this is addr>>6, i.e. block number
             pf_addr = pf_block<<LOG2_BLOCK_SIZE;
             // cout << "[" << NAME << "] " << __func__ << hex << " base_addr: " << addr << " pf_addr: " << pf_addr;
