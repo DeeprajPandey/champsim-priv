@@ -1,4 +1,4 @@
-#include <iterator> // distance
+#include <iterator> // for distance
 #include "cache.h"
 
 // allocate memory to the queue
@@ -13,11 +13,53 @@ uint32_t CACHE::find_victim(uint32_t cpu, uint64_t instr_id, uint32_t set, const
 void CACHE::update_replacement_state(uint32_t cpu, uint32_t set, uint32_t way, uint64_t full_addr, uint64_t ip, uint64_t victim_addr, uint32_t type, uint8_t hit)
 {
     if (type == WRITEBACK) {
-        if (hit) // wrietback hit does not update LRU state
+        if (hit) // writeback hit does not update LRU state
             return;
     }
 
     return lru_update(set, way);
+}
+
+uint32_t CACHE::fifo_victim(uint32_t cpu, uint64_t instr_id, uint32_t set, const BLOCK *current_set, uint64_t ip, uint64_t full_addr, uint32_t type)
+{
+    uint32_t way = 0;
+
+    // fill invalid line first
+    for (way=0; way<NUM_WAY; way++) {
+        if (block[set][way].valid == false) {
+
+            // this line is invalid, remove it from the queue
+            std::vector<uint32_t>::iterator it= std::find(fifo_queue.begin(), fifo_queue.end(), way);
+            if (it != fifo_queue.end()) { // if it's found
+                // fifo_queue.begin();
+                uint32_t index = std::distance(fifo_queue.begin(), it);
+                fifo_queue.erase(fifo_queue.begin()+index);
+            }
+            // and put it in the end because this will be filled right now
+            if (fifo_queue.size() < NUM_WAY) {
+                fifo_queue.push_back(way);
+            }
+
+            DP ( if (warmup_complete[cpu]) {
+            cout << "[" << NAME << "] " << __func__ << " instr_id: " << instr_id << " invalid set: " << set << " way: " << way;
+            cout << hex << " address: " << (full_addr>>LOG2_BLOCK_SIZE) << " victim address: " << block[set][way].address << " data: " << block[set][way].data;
+            cout << dec << " fifo front: " << fifo_queue.front() << endl; });
+
+            break;
+        }
+    }
+
+    // if no invalid cache line was found
+    if (way == NUM_WAY) {
+        // pick the one on the front of fifo
+        way = fifo_queue.front();
+        fifo_queue.erase(fifo_queue.begin());
+        // put it in the end as this will be filled right now
+        fifo_queue.push_back(way);
+
+    }
+
+    return way;
 }
 
 uint32_t CACHE::lru_victim(uint32_t cpu, uint64_t instr_id, uint32_t set, const BLOCK *current_set, uint64_t ip, uint64_t full_addr, uint32_t type)
@@ -55,52 +97,6 @@ uint32_t CACHE::lru_victim(uint32_t cpu, uint64_t instr_id, uint32_t set, const 
     if (way == NUM_WAY) {
         cerr << "[" << NAME << "] " << __func__ << " no victim! set: " << set << endl;
         assert(0);
-    }
-
-    return way;
-}
-
-uint32_t CACHE::fifo_victim(uint32_t cpu, uint64_t instr_id, uint32_t set, const BLOCK *current_set, uint64_t ip, uint64_t full_addr, uint32_t type)
-{
-    uint32_t way = 0;
-
-    // fill invalid line first
-    for (way=0; way<NUM_WAY; way++) {
-        if (block[set][way].valid == false) {
-
-            // this line is invalid, remove it from the queue
-            std::vector<uint32_t>::iterator it= std::find(fifo_queue.begin(), fifo_queue.end(), way);
-            if (it != fifo_queue.end()) { // if it's found
-                // fifo_queue.begin();
-                uint32_t index = std::distance(fifo_queue.begin(), it);
-                fifo_queue.erase(fifo_queue.begin()+index);
-            }
-            // and put it in the end because this will be filled right now
-            if (fifo_queue.size() < NUM_WAY) {
-                fifo_queue.push_back(way);
-            }
-
-            DP ( if (warmup_complete[cpu]) {
-            cout << "[" << NAME << "] " << __func__ << " instr_id: " << instr_id << " invalid set: " << set << " way: " << way;
-            cout << hex << " address: " << (full_addr>>LOG2_BLOCK_SIZE) << " victim address: " << block[set][way].address << " data: " << block[set][way].data;
-            cout << dec << " fifo: " << block[set][way].fifo << endl; });
-
-            break;
-        }
-    }
-
-    // if no invalid cache line was found
-    if (way == NUM_WAY) {
-        // pick the one on the front of fifo
-        way = fifo_queue.front();
-        fifo_queue.erase(fifo_queue.begin());
-        // put it in the end as this will be filled right now
-        fifo_queue.push_back(way);
-
-        // shouldn't happen
-        if (fifo_queue.size() > NUM_WAY) {
-            assert(0);
-        }
     }
 
     return way;
