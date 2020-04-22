@@ -19,10 +19,12 @@ using namespace std;
 typedef map<uint64_t, uint64_t>::iterator history_iter;
 typedef map<uint64_t, pair<uint8_t, uint64_t>>::iterator deadblock_iter;
 
-uint64_t get_new_signature(uint64_t, uint64_t);
+uint64_t cantor_encoding(uint64_t, uint64_t);
 void insert_to_hist(uint64_t, uint64_t);
-void printmap();
-void printvec(vector<uint64_t>);
+void print_hist_table();
+uint64_t bitwise_add(uint64_t, uint64_t);
+uint64_t bitwise_mul(uint64_t, uint64_t);
+uint64_t bitwise_div(uint64_t, uint64_t);
 
 // hist_table - block_addr: [PC1, PC2, PC3...]
 map<uint64_t, uint64_t> hist_table;
@@ -104,13 +106,12 @@ void CACHE::l1d_prefetcher_final_stats()
 //======== Helper Functions ========//
 // an implementation of cantor pairing which we use as one of the
 // encoding algorithms
-// TODO: use bitshifting to do the arithmetic operations
-uint64_t cantor_encoding(uint64_t old_sig, uint64_t pc_2)
+uint64_t cantor_encoding(uint64_t old_sig, uint64_t new_pc)
 {
-    uint64_t signature = (old_sig + pc_2);
+    uint64_t signature = (old_sig + new_pc);
     signature *= (signature+1);
     signature*=0.5;
-    signature+=pc_2;
+    signature+=new_pc;
     return signature;
 }
 
@@ -135,4 +136,65 @@ void print_hist_table()
         cout << "map: " << i->first << "\t" << i->second;
     }
     cout << endl;
+}
+
+// Bitshifting for arithmetic operations
+// using these since we are adding and multiplying large numbers
+uint64_t bitwise_add(uint64_t a, uint64_t b)
+{
+    uint64_t carry  = a & b;
+    uint64_t result = a ^ b;
+    while(carry != 0)
+    {
+        // If you need the mathematical carry from addition,
+        // check the overflow from this shift.
+        uint64_t shiftedcarry = carry << 1;
+        carry  = result & shiftedcarry;
+        result = result ^ shiftedcarry;
+    }
+    return result;
+}
+
+uint64_t bitwise_mul(uint64_t a, uint64_t b)
+{
+    uint64_t result = 0;
+    while(a != 0)
+    {
+        if(a & 1) // If the lowest order bit is set in A?
+        {
+            result = result + b;
+        }
+        a = a >> 1; // Note: This must set highest order bit ZERO. It must not copy the sign bit.
+        b = b + b;  // Alternatively, left-shift by 1 bit
+    }
+    return result;
+}
+
+uint64_t bitwise_div(uint64_t dividend, uint64_t divisor)
+{
+    if(divisor == 0)
+    {
+        return 0;
+    }
+    uint64_t scaled_divisor = divisor;
+    uint64_t remain         = dividend;
+    uint64_t result   = 0;
+    uint64_t multiple = 1;
+        
+    while(scaled_divisor < dividend)
+    {
+        scaled_divisor = scaled_divisor << 1; // Multiply by two.
+        multiple       = multiple << 1;
+    }
+    do {
+        if(remain >= scaled_divisor)
+        {
+            remain = remain - scaled_divisor;
+            result = result + multiple;
+        }
+        scaled_divisor = scaled_divisor >> 1; // Divide by two.
+        multiple       = multiple       >> 1;
+    } while(multiple != 0);
+    
+    return result;
 }
