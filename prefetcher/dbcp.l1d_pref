@@ -6,11 +6,17 @@
  */
 
 #include <map>
-#include <vector>
+#include <utility> // for pair
 #include "cache.h"
 #include "ooo_cpu.h"
 
+// for the 2-bit saturating counters corresponding to 
+// the traces in deadblock table
+#define MAX_COUNTER = 3;
+
 using namespace std;
+
+typedef map<uint64_t, uint64_t>::iterator mapiter;
 
 uint64_t get_new_signature(uint64_t, uint64_t);
 void insert_to_hist(uint64_t, uint64_t);
@@ -19,7 +25,8 @@ void printvec(vector<uint64_t>);
 
 // hist_table - block_addr: [PC1, PC2, PC3...]
 map<uint64_t, vector<uint64_t>> hist_table;
-// db_table - signature: []
+// db_table - signature: [<2bit_saturating_counter, prefetch_addr>, ...]
+map<uint64_t, pair<uint8_t, uint64_t>> db_table;
 
 void CACHE::l1d_prefetcher_initialize() 
 {
@@ -31,15 +38,41 @@ void CACHE::l1d_prefetcher_operate(uint64_t addr, uint64_t ip, uint8_t cache_hit
 {
     uint64_t tag = addr >> LOG2_BLOCK_SIZE;
     // update history table
+    // this automatically assigns a new row to a new tag and places ip there
+    // but if the tag exists, it will add ip to the existing trace
     insert_to_hist(tag, ip);
 }
 
 void CACHE::l1d_prefetcher_cache_fill(uint64_t addr, uint32_t set, uint32_t way, uint8_t prefetch, uint64_t evicted_addr, uint32_t metadata_in)
 {
+    // this will store the signature corresponding to the tag
+    // of the block being evicted
+    uint64_t signature;
     uint64_t tag_evict = evicted_addr >> LOG2_BLOCK_SIZE;
-    // cout << this->block[set][way].tag << "\t" << blocknum << endl;
-    // this block is now invalidated, move to db correlation table
-    insert_to_db_corr(tag_evict, placeholder);
+    mapiter ht_itr = hist_table.find(tag_evict);
+    // found the signature in history table
+    if (ht_itr != hist_table.end()) {
+        signature = hist_table[tag_evict];
+
+        // Note: the signature is our index into deadblock table
+
+        // Move this block's trace from history table to deadblock table
+        mapiter db_itr = db_table.find(signature);
+        if (db_itr != db_table.end() && db_table[signature].first < MAX_COUNTER) {
+            // if found, then just increment the counter
+            // each element in the table is a std::pair<> of counter, prefetch_addr
+            db_table[signature].first += 1;
+        }
+        else {
+            // add a new entry for this trace in deadblock table
+            // initialise 2bit counter to 1, prefetch address = addr
+            pair<uint8_t, uint64_t> new_trace (1, addr);
+            db_table[signature] = new_trace;
+        }
+
+        // Remove this block's entry from history table
+        hist_table.erase(tag_evict);
+    }
 }
 
 void CACHE::l1d_prefetcher_final_stats()
