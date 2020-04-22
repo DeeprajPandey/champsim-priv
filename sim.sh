@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 
 # ./build_champsim.sh bimodal no no no no lru 1
-# ./build_champsim.sh bimodal no dbcp no no lru 1
+./build_champsim.sh bimodal no dbcp no no lru 1
 
 binaries=(bimodal-no-dbcp-no-no-lru-1core)
 for bin in "${binaries[@]}"; do
