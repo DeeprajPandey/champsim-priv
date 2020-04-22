@@ -52,18 +52,14 @@ void CACHE::l1d_prefetcher_operate(uint64_t addr, uint64_t ip, uint8_t cache_hit
     // Search if the current state of the trace for this block is in the deadblock table
     deadblock_iter db_itr = db_table.find(signature);
     if (db_itr != db_table.end()) {
+        uint64_t dbtable_hit++;
         // if found, this is a dead block, so increment the 2bit counter and prefetch
         uint8_t trace_count = db_table[signature].first;
         uint8_t pred_confidence = (trace_count >= ((MAX_COUNTER + 1)/2) ? 1 : 0);
         if (pred_confidence) {
-            uint64_t dbtable_hit++;
             // if we are confident based on the counter, then prefetch
             uint64_t pf_addr = db_table[signature].second;
             prefetch_line(ip, addr, pf_addr, FILL_L1, 0);
-        }
-        // increment the number of times this trace has resulted in a deadblock
-        if (trace_count < MAX_COUNTER) {
-            db_table[signature].first += 1;
         }
     }
 }
@@ -83,16 +79,17 @@ void CACHE::l1d_prefetcher_cache_fill(uint64_t addr, uint32_t set, uint32_t way,
 
         // Move this block's trace from history table to deadblock table
         deadblock_iter db_itr = db_table.find(signature);
-        if (db_itr != db_table.end() && (db_table[signature].first < MAX_COUNTER)) {
-            // if found, then just increment the counter
-            // each element in the table is a std::pair<> of counter, prefetch_addr
-            db_table[signature].first += 1;
-        }
-        else {
-            // add a new entry for this trace in deadblock table
+        if (db_itr == db_table.end()) {
+            // if doesn't exist, add a new entry for this trace in deadblock table
             // initialise 2bit counter to 1, prefetch address = addr
             pair<uint8_t, uint64_t> new_trace (1, addr);
             db_table[signature] = new_trace;
+        }
+        else if ((db_table[signature].first < MAX_COUNTER)) {
+            // if found, then just increment the counter,
+            // i.e. another time this trace resulted in a dead block
+            // each element in the table is a std::pair<> of counter, prefetch_addr
+            db_table[signature].first += 1;
         }
 
         // Remove this block's entry from history table
@@ -135,7 +132,7 @@ uint64_t cantor_encoding(uint64_t old_sig, uint64_t new_pc)
 void insert_to_hist(uint64_t tag, uint64_t new_pc)
 {
     map<uint64_t, uint64_t>::iterator itr = hist_table.find(tag);
-    // if we found the element and iterator hasn't reached the end
+    // if we found the element, i.e. iterator hasn't reached the end
     if (itr != hist_table.end()) {
         hist_table[tag] = xor_encoding(hist_table[tag], new_pc);
     }
