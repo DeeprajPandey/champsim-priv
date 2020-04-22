@@ -17,11 +17,6 @@ void insert_to_hist(uint64_t, uint64_t);
 void printmap();
 void printvec(vector<uint64_t>);
 
-// https://en.wikipedia.org/wiki/Pairing_function#Cantor_pairing_function
-// Look at this for singature encoding for now ^.
-
-// suggestion: we will use tags and signatures as our keys,
-// so let's use map (dict.) for these directories
 // hist_table - block_addr: [PC1, PC2, PC3...]
 map<uint64_t, vector<uint64_t>> hist_table;
 // db_table - signature: []
@@ -35,16 +30,8 @@ void CACHE::l1d_prefetcher_initialize()
 void CACHE::l1d_prefetcher_operate(uint64_t addr, uint64_t ip, uint8_t cache_hit, uint8_t type)
 {
     uint64_t tag = addr >> LOG2_BLOCK_SIZE;
-    // adding full trace to history table right now
-    // TODO: delete this
+    // update history table
     insert_to_hist(tag, ip);
-
-    // // encode and update history table
-    // // TODO:change map to <uint64_t, uint64_t> first!
-    // // and change implementation to make this work
-    // uint64_t curr_sig = hist_table[tag];
-    // uint64_t new_sig = get_new_signature(curr_sig, ip);
-    // insert_to_hist(tag, new_sig);
 }
 
 void CACHE::l1d_prefetcher_cache_fill(uint64_t addr, uint32_t set, uint32_t way, uint8_t prefetch, uint64_t evicted_addr, uint32_t metadata_in)
@@ -62,9 +49,31 @@ void CACHE::l1d_prefetcher_final_stats()
 
 
 //======== Helper Functions ========//
+// an implementation of cantor pairing which we use as one of the
+// encoding algorithms
+// TODO: use bitshifting to do the arithmetic operations
+uint64_t cantor_encoding(uint64_t old_sig, uint64_t pc_2)
+{
+    uint64_t signature = (old_sig + pc_2);
+    signature *= (signature+1);
+    signature*=0.5;
+    signature+=pc_2;
+    return signature;
+}
+
+// add new_pc to some element in the history table
+// if tag doesn't exist, it will place new_pc there
+// else, it will add new+pc to the existing trace encoding
 void insert_to_hist(uint64_t tag, uint64_t new_pc)
 {
-    hist_table[tag].push_back(new_pc);
+    map<uint64_t, uint64_t>::iterator itr = hist_table.find(id);
+    // if we found the element and iterator hasn't reached the end
+    if (itr != hist_table.end()) {
+        hist_table[tag] = cantor_encoding(hist_table[tag], new_pc);
+    }
+    else {
+        hist_table[tag] = new_pc;
+    }
 }
 
 void print_hist_table()
