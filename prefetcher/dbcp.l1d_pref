@@ -108,10 +108,10 @@ void CACHE::l1d_prefetcher_final_stats()
 // encoding algorithms
 uint64_t cantor_encoding(uint64_t old_sig, uint64_t new_pc)
 {
-    uint64_t signature = (old_sig + new_pc);
-    signature *= (signature+1);
-    signature*=0.5;
-    signature+=new_pc;
+    uint64_t signature = bitwise_add(old_sig, new_pc);
+    signature = bitwise_mul(signature, (signature+1));
+    signature = bitwise_div(signature, 2);
+    signature = bitwise_add(signature, new_pc);
     return signature;
 }
 
