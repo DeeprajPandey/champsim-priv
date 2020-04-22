@@ -22,6 +22,7 @@ typedef map<uint64_t, pair<uint8_t, uint64_t>>::iterator deadblock_iter;
 uint64_t cantor_encoding(uint64_t, uint64_t);
 void insert_to_hist(uint64_t, uint64_t);
 void print_hist_table();
+void print_db_table();
 uint64_t bitwise_add(uint64_t, uint64_t);
 uint64_t bitwise_mul(uint64_t, uint64_t);
 uint64_t bitwise_div(uint64_t, uint64_t);
@@ -100,6 +101,9 @@ void CACHE::l1d_prefetcher_cache_fill(uint64_t addr, uint32_t set, uint32_t way,
 void CACHE::l1d_prefetcher_final_stats()
 {
     cout << "CPU " << cpu << " L1D DBCP final stats" << endl;
+    cout << "DBC Table size: " << db_table.size() << endl;
+    // cout << "DBC Table\n";
+    // print_db_table();
 }
 
 
@@ -134,6 +138,15 @@ void print_hist_table()
 {
     for (auto i = hist_table.begin(); i != hist_table.end(); i++) {
         cout << "map: " << i->first << "\t" << i->second;
+    }
+    cout << endl;
+}
+
+void print_db_table()
+{
+    for (auto i = db_table.begin(); i != db_table.end(); i++) {
+        cout << i->first << ":\t" << i->second.first;
+        cout << "::::" << i->second.second << endl;
     }
     cout << endl;
 }
