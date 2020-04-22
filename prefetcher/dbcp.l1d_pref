@@ -13,6 +13,7 @@
 // for the 2-bit saturating counters corresponding to 
 // the traces in deadblock table
 #define MAX_COUNTER 3
+uint64_t dbtable_hit;
 
 using namespace std;
 
@@ -37,7 +38,7 @@ void CACHE::l1d_prefetcher_initialize()
 {
     cout << "CPU " << cpu << " L1D DBCP prefetcher" << endl;
     cout << this->NAME << endl;
-    uint64_t dbtable_hit = 0;
+    dbtable_hit = 0;
 }
 
 void CACHE::l1d_prefetcher_operate(uint64_t addr, uint64_t ip, uint8_t cache_hit, uint8_t type)
@@ -52,12 +53,14 @@ void CACHE::l1d_prefetcher_operate(uint64_t addr, uint64_t ip, uint8_t cache_hit
     // Search if the current state of the trace for this block is in the deadblock table
     deadblock_iter db_itr = db_table.find(signature);
     if (db_itr != db_table.end()) {
-        uint64_t dbtable_hit++;
+        dbtable_hit++;
         // if found, this is a dead block, so increment the 2bit counter and prefetch
         uint8_t trace_count = db_table[signature].first;
         uint8_t pred_confidence = (trace_count >= ((MAX_COUNTER + 1)/2) ? 1 : 0);
         if (pred_confidence) {
-            // if we are confident based on the counter, then prefetch
+            // if we are confident based on the counter, then invalidate this block
+            invalidate_entry(tag);
+            // and prefetch
             uint64_t pf_addr = db_table[signature].second;
             prefetch_line(ip, addr, pf_addr, FILL_L1, 0);
         }
@@ -101,8 +104,7 @@ void CACHE::l1d_prefetcher_final_stats()
 {
     cout << "CPU " << cpu << " L1D DBCP final stats" << endl;
     cout << "DBC Table size: " << db_table.size() << endl;
-    cout << "HIT:\t" << dbtable_hit << "\t" << ;
-    cout << 
+    cout << "DBC TABLE\tHIT:" << dbtable_hit << "\t" << endl;
     // cout << "DBC Table\n";
     // print_db_table();
 }
