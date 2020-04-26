@@ -49,23 +49,23 @@ void CACHE::l1d_prefetcher_operate(uint64_t addr, uint64_t ip, uint8_t cache_hit
 {
     uint64_t tag = addr >> LOG2_BLOCK_SIZE;
     // update history table
-    // insert_to_hist(tag, ip);
+    insert_to_hist(tag, ip);
 
-    if (!cache_hit) {
-        uint64_t tag = addr >> LOG2_BLOCK_SIZE;
-        // add new row to history table
-        this->hist_table[tag] = add_truncate(0, ip, 1);
-        // this->hist_table[tag] = ip;
-    }
-    else {
-        // add this ip to the trace
-        history_iter ht_itr = this->hist_table.find(tag);
-        // if we found the element, i.e. iterator hasn't reached the end
-        if (ht_itr != this->hist_table.end()) {
-            this->hist_table[tag] = add_truncate(this->hist_table[tag], ip, 0);
-            // this->hist_table[tag] = xor_encoding(this->hist_table[tag], ip);
-        }
-    }
+    // if (!cache_hit) {
+    //     uint64_t tag = addr >> LOG2_BLOCK_SIZE;
+    //     // add new row to history table
+    //     // this->hist_table[tag] = add_truncate(0, ip, 1);
+    //     this->hist_table[tag] = ip;
+    // }
+    // else {
+    //     // add this ip to the trace
+    //     history_iter ht_itr = this->hist_table.find(tag);
+    //     // if we found the element, i.e. iterator hasn't reached the end
+    //     if (ht_itr != this->hist_table.end()) {
+    //         // this->hist_table[tag] = add_truncate(this->hist_table[tag], ip, 0);
+    //         this->hist_table[tag] = xor_encoding(this->hist_table[tag], ip);
+    //     }
+    // }
     // if we are here and it was a cache miss, high probability that we skip the next block
     // b/c it's highly unlikely a block dies after a single access (goes against spatial locality assumptions)
     // this is the current trace for this block
@@ -179,12 +179,12 @@ void CACHE::insert_to_hist(uint64_t tag, uint64_t new_pc)
     // if we found the element, i.e. iterator hasn't reached the end
     if (itr != this->hist_table.end()) {
         // this is not the first addr in trace, so pass 0 as last argument
-        this->hist_table[tag] = add_truncate(this->hist_table[tag], new_pc, 0);
-        // this->hist_table[tag] = xor_encoding(this->hist_table[tag], new_pc);
+        // this->hist_table[tag] = add_truncate(this->hist_table[tag], new_pc, 0);
+        this->hist_table[tag] = xor_encoding(this->hist_table[tag], new_pc);
     }
     else {
-        this->hist_table[tag] = add_truncate(0, new_pc, 1);
-        // this->hist_table[tag] = new_pc;
+        // this->hist_table[tag] = add_truncate(0, new_pc, 1);
+        this->hist_table[tag] = new_pc;
     }
 }
 
