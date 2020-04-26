@@ -13,7 +13,7 @@
 // for the 2-bit saturating counters corresponding to 
 // the traces in deadblock table
 #define MAX_COUNTER 3
-#define BITS_TO_KEEP 30
+#define BITS_TO_KEEP 13
 uint64_t dbtable_hit;
 
 // static std::map<uint64_t, uint64_t> CACHE::hist_table = std::map<uint64_t, uint64_t>();
